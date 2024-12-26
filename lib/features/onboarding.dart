@@ -1,6 +1,6 @@
 import 'package:attendance_ktp/core/media/media_colors.dart';
 import 'package:attendance_ktp/core/media/media_res.dart';
-import 'package:attendance_ktp/features/dashboard_screen.dart';
+import 'package:attendance_ktp/features/presentation/dashboard_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 

@@ -1,16 +1,23 @@
 import 'dart:async';
 
 import 'package:attendance_ktp/core/config/config_resources.dart';
+import 'package:attendance_ktp/core/media/media_colors.dart';
+import 'package:attendance_ktp/core/media/media_res.dart';
 import 'package:attendance_ktp/core/media/media_text.dart';
 import 'package:attendance_ktp/core/nfc/nfc_service.dart';
 import 'package:attendance_ktp/core/utils/location_service.dart';
 import 'package:attendance_ktp/core/utils/snackbar_extension.dart';
+import 'package:attendance_ktp/features/data/employee_provider.dart';
 import 'package:attendance_ktp/features/face_detection/face_detector_view.dart';
+import 'package:attendance_ktp/features/model/employee_model.dart';
+import 'package:attendance_ktp/features/presentation/setting_screen.dart';
 import 'package:attendance_ktp/features/widgets/reading_nfc.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_nfc_kit/flutter_nfc_kit.dart';
+import 'package:flutter_svg/svg.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -22,10 +29,9 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> {
   double currentLatitude = 0.0;
   double currentLongitude = 0.0;
-  String nfcData = 'No Data';
-  String nfcDatas = 'No Data';
   bool isInListening = false;
   bool isOutListening = false;
+  List<EmployeeModel> allEmployee = [];
 
   // timer
   String _formattedTime = '';
@@ -39,6 +45,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     _startTimer(); // Memulai Timer
     getLocation();
     availabilityNfc(context);
+    _loadData();
   }
 
   @override
@@ -53,93 +60,123 @@ class _DashboardScreenState extends State<DashboardScreen> {
     // double width = MediaQuery.of(context).size.width;
     double height = MediaQuery.of(context).size.height;
     return Scaffold(
+      backgroundColor: AppColors.bgScreen,
+      appBar: AppBar(
+        backgroundColor: AppColors.bgScreen,
+        actions: [
+          InkWell(
+            splashFactory: NoSplash.splashFactory,
+            highlightColor: Colors.transparent,
+            onTap: () async {
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const SettingScreen(),
+                ),
+              );
+            },
+            child: Padding(
+              padding: const EdgeInsets.only(right: 15),
+              child: SvgPicture.asset(
+                MediaRes.setting,
+                fit: BoxFit.contain,
+                width: 25,
+                // ignore: deprecated_member_use
+                color: AppColors.bgBlack,
+              ),
+            ),
+          ),
+        ],
+      ),
       body: SafeArea(
-        child: Column(
-          children: [
-            SizedBox(height: height * 0.1),
-            Text(
-              'Attendance KTP',
-              style: blackTextstyle.copyWith(
-                fontSize: 20,
-                fontWeight: bold,
-              ),
-            ),
-            Text(
-              _formattedTime,
-              style: blackTextstyle.copyWith(
-                fontSize: 20,
-                fontWeight: bold,
-              ),
-            ),
-            SizedBox(height: height * 0.1),
-            InkWell(
-              splashFactory: NoSplash.splashFactory,
-              highlightColor: Colors.transparent,
-              onTap: () {
-                readingNFC(
-                  context,
-                  size,
-                  () {
-                    startInNFC();
-                  },
-                  () {
-                    stopNFC();
-                  },
-                );
-              },
-              child: Container(
-                height: height * 0.2,
-                margin: const EdgeInsets.only(right: 20, left: 20),
-                decoration: BoxDecoration(
-                  color: Colors.green,
-                  borderRadius: BorderRadius.circular(10),
+        child: SingleChildScrollView(
+          child: Column(
+            children: [
+              SizedBox(height: height * 0.1),
+              Text(
+                'Attendance KTP',
+                style: blackTextstyle.copyWith(
+                  fontSize: 20,
+                  fontWeight: bold,
                 ),
-                child: Center(
-                  child: Text(
-                    isInListening ? 'Reading NFC' : 'Attendance IN',
-                    style: whiteTextstyle.copyWith(
-                      fontSize: 25,
-                      fontWeight: bold,
+              ),
+              Text(
+                _formattedTime,
+                style: blackTextstyle.copyWith(
+                  fontSize: 20,
+                  fontWeight: bold,
+                ),
+              ),
+              SizedBox(height: height * 0.1),
+              InkWell(
+                splashFactory: NoSplash.splashFactory,
+                highlightColor: Colors.transparent,
+                onTap: () {
+                  readingNFC(
+                    context,
+                    size,
+                    () {
+                      startInNFC();
+                    },
+                    () {
+                      stopNFC();
+                    },
+                  );
+                },
+                child: Container(
+                  height: height * 0.2,
+                  margin: const EdgeInsets.only(right: 20, left: 20),
+                  decoration: BoxDecoration(
+                    color: Colors.green,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Center(
+                    child: Text(
+                      isInListening ? 'Reading NFC' : 'Attendance IN',
+                      style: whiteTextstyle.copyWith(
+                        fontSize: 25,
+                        fontWeight: bold,
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
-            const SizedBox(height: 20),
-            InkWell(
-              splashFactory: NoSplash.splashFactory,
-              highlightColor: Colors.transparent,
-              onTap: () {
-                readingNFC(
-                  context,
-                  size,
-                  () {
-                    startOutNFC();
-                  },
-                  () {
-                    stopNFC();
-                  },
-                );
-              },
-              child: Container(
-                height: height * 0.2,
-                margin: const EdgeInsets.only(right: 20, left: 20),
-                decoration: BoxDecoration(
-                  color: Colors.red,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Center(
-                  child: Text(
-                    isOutListening ? 'Reading NFC' : 'Attendance Out',
-                    style: whiteTextstyle.copyWith(
-                      fontSize: 25,
-                      fontWeight: bold,
+              const SizedBox(height: 20),
+              InkWell(
+                splashFactory: NoSplash.splashFactory,
+                highlightColor: Colors.transparent,
+                onTap: () {
+                  readingNFC(
+                    context,
+                    size,
+                    () {
+                      startOutNFC();
+                    },
+                    () {
+                      stopNFC();
+                    },
+                  );
+                },
+                child: Container(
+                  height: height * 0.2,
+                  margin: const EdgeInsets.only(right: 20, left: 20),
+                  decoration: BoxDecoration(
+                    color: Colors.red,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Center(
+                    child: Text(
+                      isOutListening ? 'Reading NFC' : 'Attendance Out',
+                      style: whiteTextstyle.copyWith(
+                        fontSize: 25,
+                        fontWeight: bold,
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -167,11 +204,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
       while (isInListening) {
         try {
           final NFCTag tag = await FlutterNfcKit.poll();
-          nfcDatas = tag.id;
           setDataNFC(tag, false);
         } on Exception catch (e) {
           setState(() {
-            nfcDatas = 'Error reading NFC: $e';
+            // ignore: avoid_print
+            print('Error reading NFC: $e');
             // Stop listening if there's an error
             isInListening = false;
           });
@@ -194,11 +231,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
       while (isOutListening) {
         try {
           final NFCTag tag = await FlutterNfcKit.poll();
-          nfcDatas = tag.id;
           setDataNFC(tag, true);
         } on Exception catch (e) {
           setState(() {
-            nfcDatas = 'Error reading NFC: $e';
+            // ignore: avoid_print
+            print('Error reading NFC: $e');
             // Stop listening if there's an error
             isOutListening = false;
           });
@@ -221,6 +258,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   void setDataNFC(NFCTag tag, bool type) async {
     int levelChecking = 0;
+    String nameID = '';
     bool isChecking = true;
     bool isCheckingID = false;
     bool isCheckingTime = false;
@@ -229,8 +267,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
     String error = 'Error';
     DateTime now = DateTime.now(); // Ambil waktu saat ini
 
-    //! Checking id KTP terdaftar atau tidak
-    if (StringResources.inIdEmployee == tag.id) {
+    //! Checking id KTP terdaftar atau tidak menggunakan ID yang terdaftar
+    for (var e in allEmployee) {
+      if (e.id == tag.id) {
+        nameID = e.name ?? '';
+      }
+    }
+    if (nameID.isNotEmpty) {
       isCheckingID = true;
       levelChecking = 1;
     } else {
@@ -331,9 +374,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
     if (isChecking && levelChecking > 3) {
       isChecking = true;
       if (type) {
-        success = 'Attandance Out Berhasil';
+        success = 'Attandance Out $nameID Berhasil';
       } else {
-        success = 'Attandance IN Berhasil';
+        success = 'Attandance IN $nameID Berhasil';
       }
     }
 
@@ -366,5 +409,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
       currentLatitude = position.latitude;
       currentLongitude = position.longitude;
     }
+  }
+
+  void _loadData() async {
+    final provider = Provider.of<EmployeeProvider>(context, listen: false);
+    allEmployee = await provider.getEmployee();
+    setState(() {});
   }
 }
