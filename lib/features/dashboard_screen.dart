@@ -24,7 +24,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
   double currentLongitude = 0.0;
   String nfcData = 'No Data';
   String nfcDatas = 'No Data';
-  bool isListening = false;
+  bool isInListening = false;
+  bool isOutListening = false;
 
   // timer
   String _formattedTime = '';
@@ -79,7 +80,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   context,
                   size,
                   () {
-                    startNFC();
+                    startInNFC();
                   },
                   () {
                     stopNFC();
@@ -95,7 +96,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
                 child: Center(
                   child: Text(
-                    isListening ? 'Reading NFC' : 'Attendance IN',
+                    isInListening ? 'Reading NFC' : 'Attendance IN',
                     style: whiteTextstyle.copyWith(
                       fontSize: 25,
                       fontWeight: bold,
@@ -113,7 +114,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   context,
                   size,
                   () {
-                    startNFC();
+                    startOutNFC();
                   },
                   () {
                     stopNFC();
@@ -129,7 +130,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
                 child: Center(
                   child: Text(
-                    isListening ? 'Reading NFC' : 'Attendance Out',
+                    isOutListening ? 'Reading NFC' : 'Attendance Out',
                     style: whiteTextstyle.copyWith(
                       fontSize: 25,
                       fontWeight: bold,
@@ -156,40 +157,69 @@ class _DashboardScreenState extends State<DashboardScreen> {
     });
   }
 
-  Future<void> startNFC() async {
+  Future<void> startInNFC() async {
     setState(() {
-      isListening = true;
+      isInListening = true;
     });
 
     var availability = await FlutterNfcKit.nfcAvailability;
     if (availability == NFCAvailability.available) {
-      while (isListening) {
+      while (isInListening) {
         try {
           final NFCTag tag = await FlutterNfcKit.poll();
           nfcDatas = tag.id;
-          setDataNFC(tag);
+          setDataNFC(tag, false);
         } on Exception catch (e) {
           setState(() {
             nfcDatas = 'Error reading NFC: $e';
-            isListening = false; // Stop listening if there's an error
+            // Stop listening if there's an error
+            isInListening = false;
           });
         }
       }
     } else {
       setState(() {
-        isListening = false;
+        isInListening = false;
+      });
+    }
+  }
+
+  Future<void> startOutNFC() async {
+    setState(() {
+      isOutListening = true;
+    });
+
+    var availability = await FlutterNfcKit.nfcAvailability;
+    if (availability == NFCAvailability.available) {
+      while (isOutListening) {
+        try {
+          final NFCTag tag = await FlutterNfcKit.poll();
+          nfcDatas = tag.id;
+          setDataNFC(tag, true);
+        } on Exception catch (e) {
+          setState(() {
+            nfcDatas = 'Error reading NFC: $e';
+            // Stop listening if there's an error
+            isOutListening = false;
+          });
+        }
+      }
+    } else {
+      setState(() {
+        isOutListening = false;
       });
     }
   }
 
   void stopNFC() {
     setState(() {
-      isListening = false;
+      isInListening = false;
+      isOutListening = false;
     });
     FlutterNfcKit.finish();
   }
 
-  void setDataNFC(NFCTag tag) async {
+  void setDataNFC(NFCTag tag, bool type) async {
     int levelChecking = 0;
     bool isChecking = true;
     bool isCheckingID = false;
@@ -198,7 +228,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     String success = 'Berhasil';
     String error = 'Error';
     DateTime now = DateTime.now(); // Ambil waktu saat ini
-    DateTime targetTime = DateFormat("HH:mm").parse(StringResources.inTimeIn);
 
     //! Checking id KTP terdaftar atau tidak
     if (StringResources.inIdEmployee == tag.id) {
@@ -206,24 +235,49 @@ class _DashboardScreenState extends State<DashboardScreen> {
       levelChecking = 1;
     } else {
       isChecking = false;
-      error = 'Attandance Gagal KTP tidak terdaftar';
+      error = StringResources.inErrorKTP;
     }
 
     //! Checking waktu absensi
     if (isCheckingID) {
-      if (StringResources.inUseTime) {
-        // memeriksa apakah waktu yang dijadwalnya sudah melewati atau belum
-        // disini kondisinya adalah harus melewati batas yang di jadwalkan
-        if (now.isAfter(targetTime)) {
+      if (type) {
+        if (StringResources.outUseTime) {
+          // memeriksa apakah waktu yang dijadwalnya sudah melewati atau belum
+          // disini kondisinya adalah harus melewati batas yang di jadwalkan
+          DateTime targetTime =
+              DateFormat("HH:mm").parse(StringResources.outTimeIn);
+          targetTime = DateTime(
+              now.year, now.month, now.day, targetTime.hour, targetTime.minute);
+          if (now.isAfter(targetTime)) {
+            levelChecking = 2;
+            isCheckingTime = true;
+          } else {
+            isChecking = false;
+            error = StringResources.outErrorTime;
+          }
+        } else {
           levelChecking = 2;
           isCheckingTime = true;
-        } else {
-          isChecking = false;
-          error = 'Attandance Gagal belum waktunya absensi in';
         }
       } else {
-        levelChecking = 2;
-        isCheckingTime = true;
+        if (StringResources.inUseTime) {
+          // memeriksa apakah waktu yang dijadwalnya sudah melewati atau belum
+          // disini kondisinya adalah harus melewati batas yang di jadwalkan
+          DateTime targetTime =
+              DateFormat("HH:mm").parse(StringResources.inTimeIn);
+          targetTime = DateTime(
+              now.year, now.month, now.day, targetTime.hour, targetTime.minute);
+          if (now.isAfter(targetTime)) {
+            levelChecking = 2;
+            isCheckingTime = true;
+          } else {
+            isChecking = false;
+            error = StringResources.inErrorTime;
+          }
+        } else {
+          levelChecking = 2;
+          isCheckingTime = true;
+        }
       }
     }
 
@@ -249,7 +303,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         // bisa di sesuaikan berapa digit di belakang koma
         String txtRange = checkRangeLoc.toStringAsFixed(2);
         isChecking = false;
-        error = 'Attandance Gagal jarak anda terlalu jauh $txtRange meter';
+        error = '${StringResources.inErrorLoc} $txtRange meter';
       }
     }
     // close popup use NFC
@@ -270,13 +324,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
         levelChecking = 4;
       } else {
         isChecking = false;
-        error = 'Attandance Gagal Wajah tidak terdeteksi (Live)';
+        error = StringResources.inErrorFace;
       }
     }
 
     if (isChecking && levelChecking > 3) {
       isChecking = true;
-      success = 'Attandance Berhasil';
+      if (type) {
+        success = 'Attandance Out Berhasil';
+      } else {
+        success = 'Attandance IN Berhasil';
+      }
     }
 
     _popUp(isChecking, success, error);
