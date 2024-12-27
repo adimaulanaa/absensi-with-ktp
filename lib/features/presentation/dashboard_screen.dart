@@ -9,7 +9,9 @@ import 'package:attendance_ktp/core/utils/location_service.dart';
 import 'package:attendance_ktp/core/utils/snackbar_extension.dart';
 import 'package:attendance_ktp/features/data/employee_provider.dart';
 import 'package:attendance_ktp/features/face_detection/face_detector_view.dart';
+import 'package:attendance_ktp/features/model/absensi_model.dart';
 import 'package:attendance_ktp/features/model/employee_model.dart';
+import 'package:attendance_ktp/features/model/response_model.dart';
 import 'package:attendance_ktp/features/presentation/setting_screen.dart';
 import 'package:attendance_ktp/features/widgets/reading_nfc.dart';
 import 'package:flutter/material.dart';
@@ -32,6 +34,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
   bool isInListening = false;
   bool isOutListening = false;
   List<EmployeeModel> allEmployee = [];
+  List<AbsensiModel> getAllAbsensi = [];
+  // AbsensiModel createAb = AbsensiModel();
+  ResponseModel response = ResponseModel();
 
   // timer
   String _formattedTime = '';
@@ -92,7 +97,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         child: SingleChildScrollView(
           child: Column(
             children: [
-              SizedBox(height: height * 0.1),
+              SizedBox(height: height * 0.03),
               Text(
                 'Attendance KTP',
                 style: blackTextstyle.copyWith(
@@ -107,7 +112,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   fontWeight: bold,
                 ),
               ),
-              SizedBox(height: height * 0.1),
+              SizedBox(height: height * 0.05),
               InkWell(
                 splashFactory: NoSplash.splashFactory,
                 highlightColor: Colors.transparent,
@@ -175,6 +180,68 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
                 ),
               ),
+              const SizedBox(height: 20),
+              Text(
+                'History Attendance',
+                style: blackTextstyle.copyWith(
+                  fontSize: 25,
+                  fontWeight: bold,
+                ),
+              ),
+              SingleChildScrollView(
+                child: Padding(
+                  padding: const EdgeInsets.only(left: 20, right: 20),
+                  child: Column(
+                    children: getAllAbsensi.map((e) {
+                      String time = DateFormat('HH:mm:ss').format(e.createOn!);
+                      return Row(
+                        // mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            e.idCard.toString(),
+                            style: blackTextstyle.copyWith(
+                              fontSize: 13,
+                              fontWeight: medium,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
+                          ),
+                          const SizedBox(width: 5),
+                          Text(
+                            e.name.toString(),
+                            style: blackTextstyle.copyWith(
+                              fontSize: 12,
+                              fontWeight: medium,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
+                          ),
+                          const SizedBox(width: 5),
+                          Text(
+                            e.type.toString(),
+                            style: blackTextstyle.copyWith(
+                              fontSize: 12,
+                              fontWeight: medium,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
+                          ),
+                          const SizedBox(width: 5),
+                          Text(
+                            time,
+                            style: blackTextstyle.copyWith(
+                              fontSize: 12,
+                              fontWeight: medium,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
+                          ),
+                        ],
+                      );
+                    }).toList(),
+                  ),
+                ),
+              )
             ],
           ),
         ),
@@ -373,15 +440,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     if (isChecking && levelChecking > 3) {
       isChecking = true;
-      if (type) {
-        success = 'Attandance Out $nameID Berhasil';
-      } else {
-        success = 'Attandance IN $nameID Berhasil';
-      }
+      createAbsensi(tag, nameID, type);
+    } else {
+      _popUp(isChecking, success, error);
     }
-
-    _popUp(isChecking, success, error);
-    setState(() {});
   }
 
   void _popUp(bool isChecking, String success, error) {
@@ -414,6 +476,42 @@ class _DashboardScreenState extends State<DashboardScreen> {
   void _loadData() async {
     final provider = Provider.of<EmployeeProvider>(context, listen: false);
     allEmployee = await provider.getEmployee();
+    getAllAbsensi = await provider.getAbsensi();
     setState(() {});
+  }
+
+  void createAbsensi(NFCTag tag, String nameID, bool type) async {
+    final provider = Provider.of<EmployeeProvider>(context, listen: false);
+    String types = '';
+    if (type) {
+      types = 'OUT';
+    } else {
+      types = 'IN';
+    }
+    AbsensiModel createAb = AbsensiModel(
+      idCard: tag.id,
+      name: nameID,
+      sak: tag.sak,
+      standard: tag.standard,
+      type: types,
+      createOn: DateTime.now(),
+    );
+    response = await provider.createAbsensi(createAb);
+    // isLoading.value = false;
+    if (response.isSucces) {
+      // ignore: use_build_context_synchronously
+      context.showSuccesSnackBar(
+        response.message,
+        onNavigate: () {
+          _loadData();
+        }, // bottom close
+      );
+    } else {
+      // ignore: use_build_context_synchronously
+      context.showErrorSnackBar(
+        response.message,
+        onNavigate: () {}, // bottom close
+      );
+    }
   }
 }

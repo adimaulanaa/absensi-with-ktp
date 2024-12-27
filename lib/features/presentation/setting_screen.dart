@@ -128,6 +128,7 @@ class _SettingScreenState extends State<SettingScreen> {
                 return Container(
                   width: size.width,
                   padding: const EdgeInsets.all(10),
+                  margin: const EdgeInsets.only(bottom: 10),
                   decoration: BoxDecoration(
                     border: Border.all(
                       color: AppColors.primary,
