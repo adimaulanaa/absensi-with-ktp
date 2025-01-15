@@ -62,41 +62,42 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   Widget build(BuildContext context) {
     Size size = MediaQuery.of(context).size;
-    // double width = MediaQuery.of(context).size.width;
     double height = MediaQuery.of(context).size.height;
     return Scaffold(
       backgroundColor: AppColors.bgScreen,
-      appBar: AppBar(
-        backgroundColor: AppColors.bgScreen,
-        actions: [
-          InkWell(
-            splashFactory: NoSplash.splashFactory,
-            highlightColor: Colors.transparent,
-            onTap: () async {
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const SettingScreen(),
-                ),
-              );
-            },
-            child: Padding(
-              padding: const EdgeInsets.only(right: 15),
-              child: SvgPicture.asset(
-                MediaRes.setting,
-                fit: BoxFit.contain,
-                width: 25,
-                // ignore: deprecated_member_use
-                color: AppColors.bgBlack,
-              ),
-            ),
-          ),
-        ],
-      ),
       body: SafeArea(
         child: SingleChildScrollView(
           child: Column(
             children: [
+              SizedBox(height: height * 0.03),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const SizedBox.shrink(),
+                  InkWell(
+                    splashFactory: NoSplash.splashFactory,
+                    highlightColor: Colors.transparent,
+                    onTap: () async {
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const SettingScreen(),
+                        ),
+                      );
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.only(right: 15),
+                      child: SvgPicture.asset(
+                        MediaRes.setting,
+                        fit: BoxFit.contain,
+                        width: 25,
+                        // ignore: deprecated_member_use
+                        color: AppColors.bgBlack,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
               SizedBox(height: height * 0.03),
               Text(
                 'Attendance KTP',
@@ -188,55 +189,58 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   fontWeight: bold,
                 ),
               ),
+              const SizedBox(height: 10),
               SingleChildScrollView(
                 child: Padding(
                   padding: const EdgeInsets.only(left: 20, right: 20),
                   child: Column(
                     children: getAllAbsensi.map((e) {
                       String time = DateFormat('HH:mm:ss').format(e.createOn!);
-                      return Row(
-                        // mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            e.idCard.toString(),
-                            style: blackTextstyle.copyWith(
-                              fontSize: 13,
-                              fontWeight: medium,
+                      bool inout = false;
+                      if (e.type == 'OUT') {
+                        inout = true;
+                      }
+                      return Container(
+                        height: size.height * 0.05,
+                        padding: const EdgeInsets.only(left: 20, right: 20),
+                        decoration: BoxDecoration(
+                          color: inout ? Colors.red : Colors.green,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              e.name.toString(),
+                              style: blackTextstyle.copyWith(
+                                fontSize: 12,
+                                fontWeight: medium,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                              maxLines: 1,
                             ),
-                            overflow: TextOverflow.ellipsis,
-                            maxLines: 1,
-                          ),
-                          const SizedBox(width: 5),
-                          Text(
-                            e.name.toString(),
-                            style: blackTextstyle.copyWith(
-                              fontSize: 12,
-                              fontWeight: medium,
+                            const SizedBox(width: 5),
+                            Text(
+                              e.type.toString(),
+                              style: blackTextstyle.copyWith(
+                                fontSize: 12,
+                                fontWeight: medium,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                              maxLines: 1,
                             ),
-                            overflow: TextOverflow.ellipsis,
-                            maxLines: 1,
-                          ),
-                          const SizedBox(width: 5),
-                          Text(
-                            e.type.toString(),
-                            style: blackTextstyle.copyWith(
-                              fontSize: 12,
-                              fontWeight: medium,
+                            const SizedBox(width: 5),
+                            Text(
+                              'Time $time',
+                              style: blackTextstyle.copyWith(
+                                fontSize: 12,
+                                fontWeight: medium,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                              maxLines: 1,
                             ),
-                            overflow: TextOverflow.ellipsis,
-                            maxLines: 1,
-                          ),
-                          const SizedBox(width: 5),
-                          Text(
-                            time,
-                            style: blackTextstyle.copyWith(
-                              fontSize: 12,
-                              fontWeight: medium,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                            maxLines: 1,
-                          ),
-                        ],
+                          ],
+                        ),
                       );
                     }).toList(),
                   ),
