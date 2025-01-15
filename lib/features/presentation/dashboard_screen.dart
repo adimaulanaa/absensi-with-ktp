@@ -5,7 +5,6 @@ import 'package:attendance_ktp/core/media/media_colors.dart';
 import 'package:attendance_ktp/core/media/media_res.dart';
 import 'package:attendance_ktp/core/media/media_text.dart';
 import 'package:attendance_ktp/core/nfc/nfc_service.dart';
-import 'package:attendance_ktp/core/utils/location_service.dart';
 import 'package:attendance_ktp/core/utils/snackbar_extension.dart';
 import 'package:attendance_ktp/features/data/employee_provider.dart';
 import 'package:attendance_ktp/features/face_detection/face_detector_view.dart';
@@ -13,6 +12,7 @@ import 'package:attendance_ktp/features/model/absensi_model.dart';
 import 'package:attendance_ktp/features/model/employee_model.dart';
 import 'package:attendance_ktp/features/model/response_model.dart';
 import 'package:attendance_ktp/features/presentation/setting_screen.dart';
+import 'package:attendance_ktp/features/widgets/dashboard_widgets.dart';
 import 'package:attendance_ktp/features/widgets/reading_nfc.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_nfc_kit/flutter_nfc_kit.dart';
@@ -195,53 +195,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   padding: const EdgeInsets.only(left: 20, right: 20),
                   child: Column(
                     children: getAllAbsensi.map((e) {
-                      String time = DateFormat('HH:mm:ss').format(e.createOn!);
-                      bool inout = false;
-                      if (e.type == 'OUT') {
-                        inout = true;
-                      }
-                      return Container(
-                        height: size.height * 0.05,
-                        padding: const EdgeInsets.only(left: 20, right: 20),
-                        decoration: BoxDecoration(
-                          color: inout ? Colors.red : Colors.green,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              e.name.toString(),
-                              style: blackTextstyle.copyWith(
-                                fontSize: 12,
-                                fontWeight: medium,
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                              maxLines: 1,
-                            ),
-                            const SizedBox(width: 5),
-                            Text(
-                              e.type.toString(),
-                              style: blackTextstyle.copyWith(
-                                fontSize: 12,
-                                fontWeight: medium,
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                              maxLines: 1,
-                            ),
-                            const SizedBox(width: 5),
-                            Text(
-                              'Time $time',
-                              style: blackTextstyle.copyWith(
-                                fontSize: 12,
-                                fontWeight: medium,
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                              maxLines: 1,
-                            ),
-                          ],
-                        ),
-                      );
+                      return historyAttendance(size, e);
                     }).toList(),
                   ),
                 ),
@@ -446,35 +400,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
       isChecking = true;
       createAbsensi(tag, nameID, type);
     } else {
-      _popUp(isChecking, success, error);
-    }
-  }
-
-  void _popUp(bool isChecking, String success, error) {
-    if (isChecking) {
-      context.showSuccesSnackBar(
-        success,
-        onNavigate: () {}, // bottom close
-      );
-    } else {
-      context.showErrorSnackBar(
-        error,
-        onNavigate: () {}, // bottom close
-      );
+      // ignore: use_build_context_synchronously
+      popUp(context, isChecking, success, error);
     }
   }
 
   void getLocation() async {
     // Memeriksa status GPS dan izin lokasi
-    bool isGpsEnabled = await LocationService.isGpsEnabled();
-    bool isPermissionGranted = await LocationService.requestPermission();
-    // Mendapatkan lokasi menggunakan LocationService
-    if (isGpsEnabled && isPermissionGranted) {
-      // Jika GPS hidup dan akses diberikan, ambil lokasi
-      Position position = await LocationService.getCurrentLocation();
-      currentLatitude = position.latitude;
-      currentLongitude = position.longitude;
-    }
+    currentLatitude = await getDataLocation(false);
+    currentLongitude = await getDataLocation(true);
   }
 
   void _loadData() async {
