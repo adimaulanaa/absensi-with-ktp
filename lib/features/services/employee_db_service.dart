@@ -61,7 +61,6 @@ class EmployeeDbService {
     List<EmployeeModel> res = [];
     List<Map<String, Object?>> result = await db.query(
       'employee',
-      where: 'created_on >= ?',
     );
     for (var e in result) {
       res.add(

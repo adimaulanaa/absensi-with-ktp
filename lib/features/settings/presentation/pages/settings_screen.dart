@@ -5,6 +5,7 @@ import 'package:attendance_ktp/core/media/media_text.dart';
 import 'package:attendance_ktp/core/utils/loading.dart';
 import 'package:attendance_ktp/core/utils/snackbar_extension.dart';
 import 'package:attendance_ktp/features/dashboard/data/models/employee_model.dart';
+import 'package:attendance_ktp/features/dashboard/data/models/response_model.dart';
 import 'package:attendance_ktp/features/dashboard/presentation/pages/dashboard_screen.dart';
 import 'package:attendance_ktp/features/settings/presentation/bloc/settings_bloc.dart';
 import 'package:attendance_ktp/features/settings/presentation/bloc/settings_event.dart';
@@ -24,7 +25,7 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   final searchController = TextEditingController();
   List<EmployeeModel> allEmployee = [];
-  List<EmployeeModel> viewEmployee = [];
+
   @override
   void initState() {
     super.initState();
@@ -32,6 +33,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   void load() {
+    allEmployee = [];
     context.read<SettingsBloc>().add(const GetEmployee());
   }
 
@@ -81,10 +83,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 onNavigate: () {}, // bottom close
               );
             }
+          } else if (state is DeleteEmployeeIdError) {
+            if (state.error != '') {
+              context.showErrorSnackBar(
+                state.error,
+                onNavigate: () {}, // bottom close
+              );
+            }
           } else if (state is EmployeeLoaded) {
             if (state.data.isNotEmpty) {
               allEmployee = state.data;
             }
+          } else if (state is DeleteEmployeeIdSuccess) {
+            checkSubmit(state.success);
           }
         },
         child: BlocBuilder<SettingsBloc, SettingsState>(
@@ -92,7 +103,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
             return Stack(
               children: [
                 _bodyData(context, size), // Latar belakang utama
-                if (state is EmployeeLoading) ...[
+                if (state is EmployeeLoading ||
+                    state is DeleteEmployeeIdLoading) ...[
                   // Layar semi-transparan gelap
                   Container(
                     color: Colors.black.withOpacity(0.5),
@@ -159,7 +171,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               const SizedBox(height: 25),
               Column(
-                children: viewEmployee.map((e) {
+                children: allEmployee.map((e) {
                   return Container(
                     width: size.width,
                     padding: const EdgeInsets.all(10),
@@ -256,5 +268,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
       ),
     );
+  }
+
+  void checkSubmit(ResponseModel success) {
+    if (success.isSucces) {
+      load();
+      context.showSuccesSnackBar(
+        success.message,
+        onNavigate: () {}, // bottom close
+      );
+    } else {
+      context.showErrorSnackBar(
+        success.message,
+        onNavigate: () {}, // bottom close
+      );
+    }
+    setState(() {});
   }
 }

@@ -12,6 +12,8 @@ class MediaRes {
   static const close = '$_baseIcon/close.svg';
   static const deleteUser = '$_baseIcon/user-delete.svg';
   static const addUser = '$_baseIcon/user-add.svg';
+  static const dSearch = '$_baseIcon/search.svg';
+  static const dSearchRight = '$_baseIcon/search-right.svg';
 
   // ! Onboarding
   static const omboarding = '$_baseImage/logo.png';

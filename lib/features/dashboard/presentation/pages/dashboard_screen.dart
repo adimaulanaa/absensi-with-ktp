@@ -12,6 +12,7 @@ import 'package:attendance_ktp/features/dashboard/data/models/employee_model.dar
 import 'package:attendance_ktp/features/dashboard/presentation/bloc/dashboard_bloc.dart';
 import 'package:attendance_ktp/features/dashboard/presentation/bloc/dashboard_event.dart';
 import 'package:attendance_ktp/features/dashboard/presentation/bloc/dashboard_state.dart';
+import 'package:attendance_ktp/features/dashboard/presentation/pages/view_all_employee.dart';
 import 'package:attendance_ktp/features/dashboard/presentation/widgets/dashboard_widgets.dart';
 import 'package:attendance_ktp/features/dashboard/presentation/widgets/reading_nfc.dart';
 import 'package:attendance_ktp/features/face_detection/face_detector_view.dart';
@@ -269,16 +270,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ),
                   ),
                   InkWell(
+                    splashFactory: NoSplash.splashFactory,
+                    highlightColor: Colors.transparent,
                     onTap: () {
-                      // 
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const ViewAllEmployee(),
+                        ),
+                      );
                     },
                     child: Text(
-                    'View all',
-                    style: blueTextstyle.copyWith(
-                      fontSize: 13,
-                      fontWeight: bold,
+                      'View all',
+                      style: blueTextstyle.copyWith(
+                        fontSize: 13,
+                        fontWeight: bold,
+                      ),
                     ),
-                  ),
                   )
                 ],
               ),

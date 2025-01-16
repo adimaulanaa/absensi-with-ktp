@@ -4,6 +4,7 @@ import 'package:attendance_ktp/core/media/media_text.dart';
 import 'package:attendance_ktp/core/utils/loading.dart';
 import 'package:attendance_ktp/core/utils/snackbar_extension.dart';
 import 'package:attendance_ktp/features/dashboard/data/models/employee_model.dart';
+import 'package:attendance_ktp/features/dashboard/data/models/response_model.dart';
 import 'package:attendance_ktp/features/dashboard/presentation/widgets/reading_nfc.dart';
 import 'package:attendance_ktp/features/settings/presentation/bloc/settings_bloc.dart';
 import 'package:attendance_ktp/features/settings/presentation/bloc/settings_event.dart';
@@ -40,12 +41,7 @@ class _CreateEmployeeScreenState extends State<CreateEmployeeScreen> {
               );
             }
           } else if (state is CreateEmployeeSuccess) {
-            if (state.success.isSucces) {
-              context.showSuccesSnackBar(
-                state.success.message,
-                onNavigate: () {}, // bottom close
-              );
-            }
+            checkSubmit(state.success);
           }
         },
         child: BlocBuilder<SettingsBloc, SettingsState>(
@@ -256,5 +252,22 @@ class _CreateEmployeeScreenState extends State<CreateEmployeeScreen> {
       updatedOn: DateTime.now(),
     );
     context.read<SettingsBloc>().add(CreateEmployee(create: push));
+  }
+
+  void checkSubmit(ResponseModel success) {
+    if (success.isSucces) {
+      context.showSuccesSnackBar(
+        success.message,
+        onNavigate: () {
+          context.read<SettingsBloc>().add(const GetEmployee());
+          Navigator.pop(context);
+        }, // bottom close
+      );
+    } else {
+      context.showErrorSnackBar(
+        success.message,
+        onNavigate: () {}, // bottom close
+      );
+    }
   }
 }
