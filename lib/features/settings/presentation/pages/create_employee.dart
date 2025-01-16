@@ -3,65 +3,98 @@ import 'package:attendance_ktp/core/media/media_colors.dart';
 import 'package:attendance_ktp/core/media/media_text.dart';
 import 'package:attendance_ktp/core/utils/loading.dart';
 import 'package:attendance_ktp/core/utils/snackbar_extension.dart';
-import 'package:attendance_ktp/features/data/employee_provider.dart';
-import 'package:attendance_ktp/features/model/employee_model.dart';
-import 'package:attendance_ktp/features/model/response_model.dart';
-import 'package:attendance_ktp/features/presentation/setting_screen.dart';
-import 'package:attendance_ktp/features/widgets/reading_nfc.dart';
+import 'package:attendance_ktp/features/dashboard/data/models/employee_model.dart';
+import 'package:attendance_ktp/features/dashboard/presentation/widgets/reading_nfc.dart';
+import 'package:attendance_ktp/features/settings/presentation/bloc/settings_bloc.dart';
+import 'package:attendance_ktp/features/settings/presentation/bloc/settings_event.dart';
+import 'package:attendance_ktp/features/settings/presentation/bloc/settings_state.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_nfc_kit/flutter_nfc_kit.dart';
-import 'package:provider/provider.dart';
 
-class CreateEmployee extends StatefulWidget {
-  const CreateEmployee({super.key});
+class CreateEmployeeScreen extends StatefulWidget {
+  const CreateEmployeeScreen({super.key});
 
   @override
-  State<CreateEmployee> createState() => _CreateEmployeeState();
+  State<CreateEmployeeScreen> createState() => _CreateEmployeeScreenState();
 }
 
-class _CreateEmployeeState extends State<CreateEmployee> {
-  final ValueNotifier<bool> isLoading = ValueNotifier(false);
-  ResponseModel response = ResponseModel();
+class _CreateEmployeeScreenState extends State<CreateEmployeeScreen> {
   final idController = TextEditingController();
   final nameController = TextEditingController();
-  bool isId = false;
-  bool isListening = false;
   String sak = '';
   String standart = '';
+  bool isSubmit = false;
+
   @override
   Widget build(BuildContext context) {
     Size size = MediaQuery.of(context).size;
     return Scaffold(
-      body: isLoading.value
-          ? const UIDialogLoading(text: StringResources.loading)
-          : _bodyData(context, size),
-      floatingActionButton: InkWell(
-        splashFactory: NoSplash.splashFactory,
-        highlightColor: Colors.transparent,
-        onTap: () {
-          if (idController.text.isNotEmpty && nameController.text.isNotEmpty) {
-            isLoading.value = true;
-            seveData();
+      body: BlocListener<SettingsBloc, SettingsState>(
+        listener: (context, state) {
+          if (state is CreateEmployeeError) {
+            if (state.error != '') {
+              context.showErrorSnackBar(
+                state.error,
+                onNavigate: () {}, // bottom close
+              );
+            }
+          } else if (state is CreateEmployeeSuccess) {
+            if (state.success.isSucces) {
+              context.showSuccesSnackBar(
+                state.success.message,
+                onNavigate: () {}, // bottom close
+              );
+            }
           }
         },
-        child: Container(
-          width: MediaQuery.of(context).size.width - 32,
-          height: 50,
-          decoration: BoxDecoration(
-            color: AppColors.primary,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Center(
-            child: Text(
-              'Simpan',
-              style: whiteTextstyle.copyWith(
-                fontSize: 22,
-                fontWeight: medium,
-              ),
-            ),
-          ),
+        child: BlocBuilder<SettingsBloc, SettingsState>(
+          builder: (context, state) {
+            return Stack(
+              children: [
+                _bodyData(context, size), // Latar belakang utama
+                if (state is EmployeeLoading) ...[
+                  // Layar semi-transparan gelap
+                  Container(
+                    color: Colors.black.withOpacity(0.5),
+                  ),
+                  // Loading overlay
+                  const UIDialogLoading(text: StringResources.loading),
+                ],
+              ],
+            );
+          },
         ),
       ),
+      floatingActionButton: isSubmit
+          ? InkWell(
+              splashFactory: NoSplash.splashFactory,
+              highlightColor: Colors.transparent,
+              onTap: () {
+                if (idController.text.isNotEmpty &&
+                    nameController.text.isNotEmpty) {
+                  seveData();
+                }
+              },
+              child: Container(
+                width: MediaQuery.of(context).size.width - 32,
+                height: 50,
+                decoration: BoxDecoration(
+                  color: AppColors.primary,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Center(
+                  child: Text(
+                    'Simpan',
+                    style: whiteTextstyle.copyWith(
+                      fontSize: 22,
+                      fontWeight: medium,
+                    ),
+                  ),
+                ),
+              ),
+            )
+          : const SizedBox.shrink(),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
     );
   }
@@ -88,7 +121,6 @@ class _CreateEmployeeState extends State<CreateEmployee> {
                 splashFactory: NoSplash.splashFactory,
                 highlightColor: Colors.transparent,
                 onTap: () {
-                  // getIDKtp();
                   readingNFC(
                     context,
                     size,
@@ -183,6 +215,11 @@ class _CreateEmployeeState extends State<CreateEmployee> {
                   fontSize: 15,
                   fontWeight: semiBold,
                 ),
+                onChanged: (value) {
+                  if (value != '') {
+                    isSubmit = true;
+                  }
+                },
                 keyboardType: TextInputType.text,
               ),
             ],
@@ -193,44 +230,23 @@ class _CreateEmployeeState extends State<CreateEmployee> {
   }
 
   Future<void> getIDKtp() async {
-    setState(() {
-      isListening = !isListening;
-    });
-
-    if (isListening) {
-      var availability = await FlutterNfcKit.nfcAvailability;
-      if (availability == NFCAvailability.available) {
-        while (isListening) {
-          try {
-            final NFCTag tag = await FlutterNfcKit.poll();
-            setState(() {
-              idController.text = tag.id;
-              sak = tag.sak ?? '';
-              standart = tag.standard;
-              Navigator.pop(context);
-            });
-          } on Exception catch (e) {
-            setState(() {
-              // ignore: avoid_print
-              print('Error reading NFC: $e');
-              isListening = false;
-            });
-          }
-        }
-      } else {
-        // ignore: use_build_context_synchronously
-        Navigator.pop(context);
-        FlutterNfcKit.finish();
-      }
+    var availability = await FlutterNfcKit.nfcAvailability;
+    if (availability == NFCAvailability.available) {
+      final NFCTag tag = await FlutterNfcKit.poll();
+      idController.text = tag.id;
+      sak = tag.sak ?? '';
+      standart = tag.standard;
+      // ignore: use_build_context_synchronously
+      Navigator.pop(context);
+      setState(() {});
     } else {
-      // If the user wants to stop listening
+      // ignore: use_build_context_synchronously
       Navigator.pop(context);
       FlutterNfcKit.finish();
     }
   }
 
   void seveData() async {
-    final provider = Provider.of<EmployeeProvider>(context, listen: false);
     EmployeeModel push = EmployeeModel(
       id: idController.text,
       name: nameController.text,
@@ -239,26 +255,6 @@ class _CreateEmployeeState extends State<CreateEmployee> {
       createdOn: DateTime.now(),
       updatedOn: DateTime.now(),
     );
-    response = await provider.createEmployee(push);
-    if (response.isSucces) {
-      // ignore: use_build_context_synchronously
-      context.showSuccesSnackBar(
-        response.message,
-        onNavigate: () {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const SettingScreen(),
-            ),
-          );
-        }, // bottom close
-      );
-    } else {
-      // ignore: use_build_context_synchronously
-      context.showErrorSnackBar(
-        response.message,
-        onNavigate: () {}, // bottom close
-      );
-    }
+    context.read<SettingsBloc>().add(CreateEmployee(create: push));
   }
 }

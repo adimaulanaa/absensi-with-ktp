@@ -1,7 +1,7 @@
 import 'package:attendance_ktp/core/media/media_text.dart';
 import 'package:attendance_ktp/core/utils/location_service.dart';
 import 'package:attendance_ktp/core/utils/snackbar_extension.dart';
-import 'package:attendance_ktp/features/model/absensi_model.dart';
+import 'package:attendance_ktp/features/dashboard/data/models/absensi_model.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:intl/intl.dart';

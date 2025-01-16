@@ -1,30 +1,28 @@
 import 'package:attendance_ktp/core/config/config_resources.dart';
-import 'package:attendance_ktp/features/data/database_service.dart';
-import 'package:attendance_ktp/features/data/employee_provider.dart';
-import 'package:attendance_ktp/features/data/employee_service.dart';
+import 'package:attendance_ktp/features/dashboard/presentation/bloc/dashboard_bloc.dart';
 import 'package:attendance_ktp/features/onboarding.dart';
+import 'package:attendance_ktp/features/settings/presentation/bloc/settings_bloc.dart';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:get_it/get_it.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
+import 'package:attendance_ktp/dependency_injection.dart' as di;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   tz.initializeTimeZones();
-  // Inisialisasi databaseService
-  final database = DatabaseService();
-  final prefs = await SharedPreferences.getInstance();
-  // runApp(const MyApp());
+  await di.init();
+  final GetIt getIt = GetIt.instance;
   runApp(
-    MultiProvider(
+    MultiBlocProvider(
       providers: [
-        ChangeNotifierProvider(
-          create: (_) => EmployeeProvider(
-            emplyeeService: EmployeeService(),
-            prefs: prefs,
-            database: database,
-          ),
+        BlocProvider<DashboardBloc>(
+          create: (context) => getIt<DashboardBloc>(),
         ),
+        BlocProvider<SettingsBloc>(
+          create: (context) => getIt<SettingsBloc>(),
+        ),
+        // Tambahkan provider lain jika diperlukan
       ],
       child: const MyApp(),
     ),

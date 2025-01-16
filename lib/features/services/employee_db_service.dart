@@ -1,15 +1,15 @@
-import 'package:attendance_ktp/features/model/absensi_model.dart';
-import 'package:attendance_ktp/features/model/employee_model.dart';
-import 'package:attendance_ktp/features/model/response_model.dart';
+import 'package:attendance_ktp/features/dashboard/data/models/absensi_model.dart';
+import 'package:attendance_ktp/features/dashboard/data/models/employee_model.dart';
+import 'package:attendance_ktp/features/dashboard/data/models/response_model.dart';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:uuid/uuid.dart';
 
-class DatabaseService {
+class EmployeeDbService {
   // Singleton pattern
-  static final DatabaseService _dBService = DatabaseService._internal();
-  factory DatabaseService() => _dBService;
-  DatabaseService._internal();
+  static final EmployeeDbService _dBService = EmployeeDbService._internal();
+  factory EmployeeDbService() => _dBService;
+  EmployeeDbService._internal();
   final uuid = const Uuid();
 
   // Membuat ID unik
@@ -54,16 +54,14 @@ class DatabaseService {
     );
   }
 
-  Future<List<EmployeeModel>> getAllNote() async {
+  //! Employee
+
+  Future<List<EmployeeModel>> getAllEmployee() async {
     final db = await _dBService.database;
     List<EmployeeModel> res = [];
-    // Calculate the date range for the last 7 days
-    final sevenDaysAgo = DateTime.now().subtract(const Duration(days: 7));
-    // Query the database with a date filter
     List<Map<String, Object?>> result = await db.query(
       'employee',
       where: 'created_on >= ?',
-      whereArgs: [sevenDaysAgo.toString()],
     );
     for (var e in result) {
       res.add(
@@ -84,33 +82,33 @@ class DatabaseService {
     return res;
   }
 
-  Future<List<AbsensiModel>> getAllAbsensi() async {
+  Future<List<EmployeeModel>> getTenEmployee() async {
     final db = await _dBService.database;
-    List<AbsensiModel> res = [];
-    // Calculate the date range for the last 7 days
-    final oneDayAgo = DateTime.now().subtract(const Duration(days: 1));
-    // Query the database with a date filter
+    List<EmployeeModel> res = [];
+
     List<Map<String, Object?>> result = await db.query(
-      'absensi',
-      where: 'created_on >= ?',
-      whereArgs: [oneDayAgo.toString()],
+      'employee',
       orderBy: 'created_on DESC',
+      limit: 10, // Membatasi hanya 10 data terbaru
     );
+
     for (var e in result) {
       res.add(
-        AbsensiModel(
+        EmployeeModel(
           id: e['_id']?.toString() ?? '',
-          idCard: e['id_card']?.toString() ?? '',
           name: e['name']?.toString() ?? '',
           sak: e['sak']?.toString() ?? '',
           standard: e['standard']?.toString() ?? '',
-          type: e['type']?.toString() ?? '',
-          createOn: e['created_on'] != null
+          createdOn: e['created_on'] != null
               ? DateTime.tryParse(e['created_on'].toString()) ?? DateTime.now()
+              : DateTime.now(),
+          updatedOn: e['updated_on'] != null
+              ? DateTime.tryParse(e['updated_on'].toString()) ?? DateTime.now()
               : DateTime.now(),
         ),
       );
     }
+
     return res;
   }
 
@@ -170,39 +168,6 @@ class DatabaseService {
     }
   }
 
-  Future<ResponseModel> createAbsensi(AbsensiModel dt) async {
-    try {
-      final db = await _dBService.database;
-      // Ekstrak tanggal tanpa waktu dari created_on
-      final createdOnDate = DateTime(
-        dt.createOn!.year,
-        dt.createOn!.month,
-        dt.createOn!.day,
-      ).toString().substring(0, 10); // Format ke YYYY-MM-DD
-
-      // Cek apakah data dengan type dan tanggal yang sama sudah ada
-      final existing = await db.query(
-        'absensi',
-        where: 'type = ? AND date(created_on) = ?',
-        whereArgs: [dt.type, createdOnDate],
-      );
-
-      if (existing.isNotEmpty) {
-        return ResponseModel(
-          isSucces: false,
-          message: 'Anda telah melakukan Absensi ${dt.type} hari ini.',
-        );
-      }
-      dt.id = generateUniqueId();
-      // Lanjutkan insert jika data belum ada
-      await db.insert('absensi', dt.toMap());
-      return ResponseModel(
-          isSucces: true, message: 'Attandance ${dt.type} ${dt.name} Berhasil');
-    } catch (e) {
-      return ResponseModel(isSucces: false, message: 'Error: $e');
-    }
-  }
-
   Future<ResponseModel> updateEmployee(EmployeeModel updatedNote) async {
     try {
       final db = await _dBService.database;
@@ -244,5 +209,69 @@ class DatabaseService {
     );
 
     return ResponseModel(isSucces: true, message: 'Deleted successfully');
+  }
+
+  //! Absensi
+  Future<List<AbsensiModel>> getAllAbsensi() async {
+    final db = await _dBService.database;
+    List<AbsensiModel> res = [];
+    // Calculate the date range for the last 7 days
+    final oneDayAgo = DateTime.now().subtract(const Duration(days: 1));
+    // Query the database with a date filter
+    List<Map<String, Object?>> result = await db.query(
+      'absensi',
+      where: 'created_on >= ?',
+      whereArgs: [oneDayAgo.toString()],
+      orderBy: 'created_on DESC',
+    );
+    for (var e in result) {
+      res.add(
+        AbsensiModel(
+          id: e['_id']?.toString() ?? '',
+          idCard: e['id_card']?.toString() ?? '',
+          name: e['name']?.toString() ?? '',
+          sak: e['sak']?.toString() ?? '',
+          standard: e['standard']?.toString() ?? '',
+          type: e['type']?.toString() ?? '',
+          createOn: e['created_on'] != null
+              ? DateTime.tryParse(e['created_on'].toString()) ?? DateTime.now()
+              : DateTime.now(),
+        ),
+      );
+    }
+    return res;
+  }
+
+  Future<ResponseModel> createAbsensi(AbsensiModel dt) async {
+    try {
+      final db = await _dBService.database;
+      // Ekstrak tanggal tanpa waktu dari created_on
+      final createdOnDate = DateTime(
+        dt.createOn!.year,
+        dt.createOn!.month,
+        dt.createOn!.day,
+      ).toString().substring(0, 10); // Format ke YYYY-MM-DD
+
+      // Cek apakah data dengan type dan tanggal yang sama sudah ada
+      final existing = await db.query(
+        'absensi',
+        where: 'type = ? AND date(created_on) = ?',
+        whereArgs: [dt.type, createdOnDate],
+      );
+
+      if (existing.isNotEmpty) {
+        return ResponseModel(
+          isSucces: false,
+          message: 'Anda telah melakukan Absensi ${dt.type} hari ini.',
+        );
+      }
+      dt.id = generateUniqueId();
+      // Lanjutkan insert jika data belum ada
+      await db.insert('absensi', dt.toMap());
+      return ResponseModel(
+          isSucces: true, message: 'Attandance ${dt.type} ${dt.name} Berhasil');
+    } catch (e) {
+      return ResponseModel(isSucces: false, message: 'Error: $e');
+    }
   }
 }
