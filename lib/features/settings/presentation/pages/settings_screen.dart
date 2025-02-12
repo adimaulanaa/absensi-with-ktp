@@ -14,6 +14,7 @@ import 'package:attendance_ktp/features/settings/presentation/pages/create_emplo
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/svg.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -25,11 +26,18 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   final searchController = TextEditingController();
   List<EmployeeModel> allEmployee = [];
+  TimeOfDay selectedInTime = const TimeOfDay(hour: 8, minute: 30);
+  TimeOfDay selectedOutTime = const TimeOfDay(hour: 17, minute: 30);
+  bool isSetTimeIn = false;
+  bool isSetTimeOut = false;
+  String setTimeIn = '-';
+  String setTimeOut = '-';
 
   @override
   void initState() {
     super.initState();
     load();
+    setTimes();
   }
 
   void load() {
@@ -129,6 +137,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               SizedBox(height: size.height * 0.03),
+              viewSetTime(context, 'Set Time In', setTimeIn, true),
+              const SizedBox(height: 25),
+              viewSetTime(context, 'Set Time Out', setTimeOut, false),
+              const SizedBox(height: 25),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -270,6 +282,52 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  Widget viewSetTime(BuildContext context, String title, name, bool type) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: blackTextstyle.copyWith(
+            fontSize: 15,
+            fontWeight: bold,
+          ),
+        ),
+        InkWell(
+          splashFactory: NoSplash.splashFactory,
+          highlightColor: Colors.transparent,
+          onTap: () {
+            if (type) {
+              _pickInTime(context);
+            } else {
+              _pickOutTime(context);
+            }
+          },
+          child: Row(
+            children: [
+              Text(
+                name,
+                style: blackTextstyle.copyWith(
+                  fontSize: 15,
+                  fontWeight: bold,
+                ),
+              ),
+              const SizedBox(width: 5),
+              SvgPicture.asset(
+                MediaRes.dEditPencil,
+                width: 18,
+                // ignore: deprecated_member_use
+                color: AppColors.bgBlack,
+                fit: BoxFit.cover,
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
   void checkSubmit(ResponseModel success) {
     if (success.isSucces) {
       load();
@@ -284,5 +342,91 @@ class _SettingsScreenState extends State<SettingsScreen> {
       );
     }
     setState(() {});
+  }
+
+  Future<void> _pickInTime(BuildContext context) async {
+    final TimeOfDay? picked = await showTimePicker(
+      context: context,
+      initialTime: selectedInTime,
+      builder: (BuildContext context, Widget? child) {
+        return Theme(
+          data: ThemeData.light().copyWith(
+            primaryColor: Colors.teal, // Warna header sesuai gambar
+            colorScheme: const ColorScheme.light(primary: Colors.teal),
+            buttonTheme:
+                const ButtonThemeData(textTheme: ButtonTextTheme.primary),
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    if (picked != null && picked != selectedInTime) {
+      setState(() {
+        selectedInTime = picked;
+        String formated = '${picked.hour}:${picked.minute}';
+        setValueTime(true, formated);
+      });
+    }
+  }
+
+  Future<void> _pickOutTime(BuildContext context) async {
+    final TimeOfDay? picked = await showTimePicker(
+      context: context,
+      initialTime: selectedOutTime,
+      builder: (BuildContext context, Widget? child) {
+        return Theme(
+          data: ThemeData.light().copyWith(
+            primaryColor: Colors.teal, // Warna header sesuai gambar
+            colorScheme: const ColorScheme.light(primary: Colors.teal),
+            buttonTheme:
+                const ButtonThemeData(textTheme: ButtonTextTheme.primary),
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    if (picked != null && picked != selectedOutTime) {
+      setState(() {
+        selectedOutTime = picked;
+        String formated = '${picked.hour}:${picked.minute}';
+        setValueTime(false, formated);
+      });
+    }
+  }
+
+  void setTimes() async {
+    final prefs = await SharedPreferences.getInstance();
+    setTimeIn = prefs.getString('setTimeIn') ?? '-';
+    setTimeOut = prefs.getString('setTimeOut') ?? '-';
+    isSetTimeIn = prefs.getBool('isSetTimeIn') ?? false;
+    isSetTimeOut = prefs.getBool('isSetTimeOut') ?? false;
+    List<String> partsIn = setTimeIn.split(":");
+    List<String> partsOut = setTimeOut.split(":");
+    int hourIn = int.parse(partsIn[0]); // Ambil jam
+    int hourOut = int.parse(partsOut[0]); // Ambil jam
+    int minuteIn = int.parse(partsIn[1]); // Ambil menit
+    int minuteOut = int.parse(partsOut[1]); // Ambil menit
+
+    // Konversi ke TimeOfDay
+    selectedInTime = TimeOfDay(hour: hourIn, minute: minuteIn);
+    selectedOutTime = TimeOfDay(hour: hourOut, minute: minuteOut);
+  }
+
+  void setValueTime(bool bool, String formated) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (bool) {
+      await prefs.setString('setTimeIn', formated);
+      await prefs.setBool('isSetTimeIn', true);
+      setTimeIn = formated;
+    } else {
+      await prefs.setString('setTimeOut', formated);
+      await prefs.setBool('isSetTimeOut', true);
+      setTimeOut = formated;
+    }
+    setState(() {
+      
+    });
   }
 }

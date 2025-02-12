@@ -1,4 +1,5 @@
 import 'package:attendance_ktp/core/config/config_resources.dart';
+import 'package:attendance_ktp/core/utils/helper.dart';
 import 'package:attendance_ktp/features/dashboard/presentation/bloc/dashboard_bloc.dart';
 import 'package:attendance_ktp/features/onboarding.dart';
 import 'package:attendance_ktp/features/settings/presentation/bloc/settings_bloc.dart';
@@ -12,6 +13,7 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   tz.initializeTimeZones();
   await di.init();
+  await Helpers.helfersTime();
   final GetIt getIt = GetIt.instance;
   runApp(
     MultiBlocProvider(

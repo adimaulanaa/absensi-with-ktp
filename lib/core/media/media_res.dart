@@ -14,6 +14,7 @@ class MediaRes {
   static const addUser = '$_baseIcon/user-add.svg';
   static const dSearch = '$_baseIcon/search.svg';
   static const dSearchRight = '$_baseIcon/search-right.svg';
+  static const dEditPencil = '$_baseIcon/edit-pencil.svg';
 
   // ! Onboarding
   static const omboarding = '$_baseImage/logo.png';

@@ -19,7 +19,6 @@ class StringResources {
   static const String loading = "Loading..."; 
 
   //! Attendance 
-  static const String inIdEmployee = "04438EC2D62A80"; 
   static const String inErrorKTP = "Attandance Gagal KTP tidak terdaftar";
   static const String inErrorLoc = "Attandance Gagal jarak anda terlalu jauh"; 
   static const String inErrorFace = "Attandance Gagal Wajah tidak terdeteksi (Live)"; 
